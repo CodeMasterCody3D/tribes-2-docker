@@ -84,7 +84,7 @@ automatically. It can live anywhere on your disk.
   ASGARD_PICK=1 ./asgard-run
   ```
 - **Pass flags to the game** — just add them; any argument starting with `-`
-  (and everything after it) is forwarded straight to `tribes2.dynamic`. No flags
+  (and everything after it) is forwarded straight to the game binary. No flags
   are forced, so you have full control. No need to run the binary by hand, and no
   `--` required once the folder is remembered:
   ```bash

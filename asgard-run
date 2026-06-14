@@ -381,5 +381,5 @@ $GAMESCOPE_CMD $HOST_WRAPPER docker run \
     -e USE_STRACE="$USE_STRACE" \
     -e USE_PADSP="$USE_PADSP" \
     $GAME_NAME \
-    bash --norc -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; CMD=""; if [ -n "$LAUNCH_CMD" ]; then CMD="$LAUNCH_CMD"; elif [ -e "${GAME_NAME}.sh" ]; then CMD="./${GAME_NAME}.sh"; elif [ -e "${GAME_NAME}.dynamic" ]; then CMD="./${GAME_NAME}.dynamic"; else CMD="./${GAME_NAME}"; fi; exec $STRACE $PADSP $CMD "$@"' \
+    bash --norc -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; CMD=""; if [ -n "$LAUNCH_CMD" ]; then CMD="$LAUNCH_CMD"; elif [ -e "${GAME_NAME}.sh" ]; then CMD="./${GAME_NAME}.sh"; elif [ -e "${GAME_NAME}" ]; then CMD="./${GAME_NAME}"; elif [ -e "${GAME_NAME}.dynamic" ]; then CMD="./${GAME_NAME}.dynamic"; else CMD="./${GAME_NAME}"; fi; exec $STRACE $PADSP $CMD "$@"' \
     _ "${GAME_ARGS[@]}"
