@@ -32,6 +32,9 @@ Copy the contents of your original *Tribes 2* Linux game directory (specifically
 
 *(Note: The required GUI fonts are already bundled under `games/tribes2/base/fonts/` for convenience).*
 
+### 3a. (Optional) Add Loki Compatibility Libraries
+If you have a `lib/` directory with Loki compatibility shared libraries (e.g. for Civ:CTP), place them in the `lib/` folder at the repo root. The build will copy them into the container's `/usr/lib/`. This directory can be empty (it ships with a `.gitkeep`).
+
 ### 3. Skip the Intro Movie in Preferences
 To prevent the Smpeg movie player from segfaulting on the missing movie file, set the skip intro preference in your local preferences file.
 
