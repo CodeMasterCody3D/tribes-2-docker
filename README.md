@@ -32,7 +32,7 @@ Copy the contents of your original *Tribes 2* Linux game directory (specifically
 
 *(Note: The required GUI fonts are already bundled under `games/tribes2/base/fonts/` for convenience).*
 
-**Alternatively**, you can skip the copy entirely and point `asgard-run` at your existing game folder on the host. The container will read the files live via a bind mount — no duplication needed. See the "Run the game" section below.
+**Alternatively (recommended)**, skip the copy entirely and point `asgard-run` at your existing game folder anywhere on the host. The container reads the files live via a bind mount — no duplication needed — and the bundled launcher (`run_t2.sh`) and replacement fonts (`base/fonts/`) from this repo are automatically layered on top of your folder, so you don't have to add them yourself. See the "Run the game" section below.
 
 ### 3a. Bundle Compatibility Libraries
 The Docker image needs old-era shared libraries (libSDL, libsmpeg, libstdc++ from GCC 2.95) to run game binaries compiled with egcs/GCC 2.95. Use the provided helper script to copy them from your game installation:
@@ -66,14 +66,25 @@ echo '$pref::SkipIntro = 1;' >> ~/.loki/tribes2/base/prefs/ClientPrefs.cs
 
 2. **Run the game (bind-mount your existing game folder — no copy needed):**
    ```bash
-   sudo ./asgard-run tribes2 /home/cody/tribes2/asgard/games/tribes2
+   ./asgard-run tribes2 /home/cody/t2-linux
    ```
-   The second argument is the path to your game directory on the host. It gets mounted read-only into the container at runtime.
+   The second argument is the path to your game directory on the host — anywhere
+   you keep it. It gets mounted read-write into the container at runtime (so the
+   engine can write `console.log`, prefs, and screenshots), and the repo's
+   `run_t2.sh` launcher and `base/fonts/` are overlaid on top automatically.
+
+   **Or run it interactively** — with no path argument the script auto-detects
+   common locations (including `~/t2-linux`) and prompts you to pick one or type
+   a path:
+   ```bash
+   ./asgard-run
+   ```
 
    **Or, if you already copied files into `games/tribes2/`:**
    ```bash
-   sudo ./asgard-run tribes2
+   ./asgard-run tribes2
    ```
-   Without a second argument, uses the game files baked into the image at build time.
+   Without a second argument and nothing to prompt for, it uses the game files
+   baked into the image at build time.
 
 The wrapper script `run_t2.sh` automatically forces the game to launch in offline mode (`-nologin`) and route output correctly.
