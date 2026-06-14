@@ -30,6 +30,7 @@ if [[ -z "$HOST_GAME_PATH" ]]; then
     # Try to auto-detect common locations
     CANDIDATES=()
     for guess in \
+        "$HOME/Downloads/t2-linux" \
         "$HOME/tribes2/asgard/games/tribes2" \
         "$HOME/tribes2/asgard" \
         "$HOME/Tribes2/Linux" \
