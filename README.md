@@ -21,77 +21,55 @@ It solves modern system issues (NPTL threading conflicts, OSS/ALSA audio locks, 
 
 ---
 
-## Installation & Setup
+## Quick Start
 
-### 1. Clone the repository
-Clone this project to your local machine.
+**The only thing you need to do is point it at your Tribes 2 game folder.**
+Everything else — building the Docker image, bundling the compatibility
+libraries and fonts, launching the game — happens automatically.
 
-### 2. Copy the Game Files (or use a bind mount)
-Copy the contents of your original *Tribes 2* Linux game directory (specifically containing files like `tribes2`, `tribes2.dynamic`, `console_start.cs`, and the `base/` folder) into the folder:
-`games/tribes2/`
-
-*(Note: The required GUI fonts are already bundled under `games/tribes2/base/fonts/` for convenience).*
-
-**Alternatively (recommended)**, skip the copy entirely and point `asgard-run` at your existing game folder anywhere on the host. The container reads the files live via a bind mount — no duplication needed — and the bundled launcher (`run_t2.sh`) and replacement fonts (`base/fonts/`) from this repo are automatically layered on top of your folder, so you don't have to add them yourself. See the "Run the game" section below.
-
-### 3a. Bundle Compatibility Libraries
-The Docker image needs old-era shared libraries (libSDL, libsmpeg, libstdc++ from GCC 2.95) to run game binaries compiled with egcs/GCC 2.95. Run the helper script with no arguments to get an **interactive arrow-key menu** that finds and copies them from your game installation:
+**Prerequisite:** [Docker](https://docs.docker.com/engine/install/) installed and
+runnable by your user.
 
 ```bash
-./bundle-libs.sh
+git clone https://github.com/CodeMasterCody3D/tribes-2-docker.git
+cd tribes-2-docker
+./asgard-run
 ```
 
-It auto-detects folders that already contain the libraries, and offers a **"Browse for a folder..."** picker (↑/↓ + **Open** to enter a folder, **Tab → "Choose THIS folder"** to select) — the same navigation as the game-folder menu, flagging any folder where the compat libraries are found. You can still pass the path directly to skip the menu:
+That's it. An arrow-key menu appears so you can tell it where your Tribes 2 game
+folder is (the folder containing `tribes2.dynamic`, `base/`, etc.):
 
-```bash
-./bundle-libs.sh /home/cody/tribes2/asgard/lib
-```
+- It lists any **auto-detected** installs — use **↑/↓** and **Enter** to pick one.
+- Or choose **"Browse for a folder..."** to navigate the filesystem:
+  - **↑/↓** highlight a folder, **Open** (Enter) goes inside it,
+    **".. (go up a level)"** goes back up.
+  - **Tab** over to **"Choose THIS folder"** to select where you are. It flags
+    the spot where Tribes 2 is detected.
 
-This populates the `lib/` directory with the required `.so` files. The `lib/.gitignore` keeps these binaries out of git — they're rebuilt per-user from their own game files.
+On the **first run** it builds the Docker image automatically (a one-time step
+that takes a few minutes). After that, `./asgard-run` launches straight into the
+folder menu and plays.
 
-### 3b. (Optional) Add Loki Compatibility Libraries
-If you have additional Loki compatibility shared libraries (e.g. for Civ:CTP), place them in the `lib/` folder at the repo root. The build will copy them into the container's `/usr/lib/`.
+Your game folder is never modified: it's bind-mounted into the container, and the
+launcher (`run_t2.sh`) and replacement fonts (`base/fonts/`) are layered on top
+automatically. It can live anywhere on your disk.
 
----
+> The menu uses `whiptail` (preinstalled on most Linux distros). Without it, or in
+> a non-interactive shell, the scripts fall back to a simple text prompt.
 
-## How to Build & Play
+### Advanced / optional
 
-1. **Build the container:**
-   ```bash
-   sudo ./asgard-build tribes2
-   ```
-
-2. **Run the game — interactive folder menu (recommended):**
-   ```bash
-   ./asgard-run tribes2
-   ```
-   With no folder argument, an arrow-key menu pops up so you can tell it where
-   your Tribes 2 game folder lives — no need to know or type the path:
-
-   - It first lists any **auto-detected** installs (e.g. `~/t2-linux`,
-     `~/Downloads/t2-linux`). Use **↑/↓** and **Enter** to pick one.
-   - Or choose **"Browse for a folder..."** to open a file browser. Inside it:
-     - **↑/↓** highlight a sub-folder, **Open** (Enter) goes inside it,
-       **".. (go up a level)"** goes back up.
-     - **Tab** over to **"Choose THIS folder"** to select the folder you're
-       currently in. It flags the spot where Tribes 2 is detected.
-   - Or pick **"Use the copy baked into the image"** to run the files bundled at
-     build time.
-
-   The chosen folder is bind-mounted read-write into the container (so the engine
-   can write `console.log`, prefs, and screenshots), and the repo's `run_t2.sh`
-   launcher and `base/fonts/` are layered on top automatically — so your game
-   folder can live anywhere and needs no modification.
-
-   **Skip the menu** by passing the path directly as a second argument:
-   ```bash
-   ./asgard-run tribes2 /home/cody/t2-linux
-   ```
-
-   *(The menu needs `whiptail`, which ships with most distros. Without it, or in a
-   non-interactive shell, the script falls back to a simple text prompt.)*
-
-The wrapper script `run_t2.sh` automatically forces the game to launch in offline mode (`-nologin`) and route output correctly.
+- **Skip the menu** by passing the path directly:
+  ```bash
+  ./asgard-run tribes2 /path/to/your/tribes2
+  ```
+- **Bake the game into the image** instead of bind-mounting: copy your game files
+  into `games/tribes2/` before the first run. Then `./asgard-run` with no folder
+  works offline from the image.
+- **Rebuild the image manually:** `./asgard-build tribes2`.
+- **Refresh the bundled compat libraries:** `./bundle-libs.sh` (interactive). The
+  libraries ship with the repo already, so you normally never need this — it's a
+  maintainer tool for swapping in a different set of `.so` files.
 
 ---
 

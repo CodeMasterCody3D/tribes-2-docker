@@ -1,8 +1,9 @@
-# Ignore all binary files in lib/ — these are game-specific shared libraries
-# that should be provided by the user or bundled via the helper script.
-*.so
-*.so.*
-*.c
+# The compatibility libraries in this folder are committed to the repo so it is
+# fully self-contained — a fresh clone can build and run with no extra steps.
+#
+# These are open-source Loki-era shared libraries (SDL 1.2, smpeg, smjpeg,
+# FreeType/ttf, libstdc++ from the GCC 2.95 / egcs era — all LGPL/GPL). They are
+# NOT Tribes 2 game data, so redistributing them here is fine.
+#
+# Only ignore transient build artifacts.
 *.o
-# Keep .gitkeep so the directory is tracked
-!.gitkeep

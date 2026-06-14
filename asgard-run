@@ -9,15 +9,22 @@ HOST_GAME_PATH=$2
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GAMES_DIR="$ROOT_DIR/games"
 
-# If no game name provided, ask
+# Pick the game automatically — the user's only job is to point at the game
+# folder, so don't bother them with this when there's only one game.
 if [[ -z "$GAME_NAME" ]]; then
-    echo "=== Tribes 2 Docker — Run Game ==="
-    echo ""
-    echo "Available games in $GAMES_DIR/:"
-    ls -1 "$GAMES_DIR/" 2>/dev/null || echo "  (none found)"
-    echo ""
-    read -rp "Enter game name (e.g. tribes2): " GAME_NAME
-    echo ""
+    mapfile -t _games < <(ls -1 "$GAMES_DIR" 2>/dev/null)
+    if [[ ${#_games[@]} -eq 1 ]]; then
+        GAME_NAME="${_games[0]}"
+    elif [[ ${#_games[@]} -gt 1 ]] && command -v whiptail >/dev/null 2>&1 && [[ -t 0 && -t 1 ]]; then
+        _menu=(); for g in "${_games[@]}"; do _menu+=("$g" ""); done
+        GAME_NAME=$(whiptail --title "Tribes 2 Docker — Select Game" \
+            --menu "Which game do you want to run?" 18 60 8 "${_menu[@]}" \
+            3>&1 1>&2 2>&3) || { echo "Cancelled."; exit 1; }
+    else
+        echo "Available games in $GAMES_DIR/:"
+        ls -1 "$GAMES_DIR/" 2>/dev/null || echo "  (none found)"
+        read -rp "Enter game name (e.g. tribes2): " GAME_NAME
+    fi
 fi
 
 # --- Interactive game-folder selection ---------------------------------------
@@ -162,6 +169,17 @@ EXTRA_ENV=""
 # Source per-game config if it exists
 if [[ -f "$ROOT_DIR/config/$GAME_NAME.cfg" ]]; then
     source "$ROOT_DIR/config/$GAME_NAME.cfg"
+fi
+
+# First run: build the Docker image automatically if it doesn't exist yet, so
+# the only thing the user ever has to do is pick the game folder above.
+if ! docker image inspect "$GAME_NAME" >/dev/null 2>&1; then
+    echo ""
+    echo "Docker image '$GAME_NAME' not found — building it now (one-time setup)."
+    echo "This can take a few minutes the first time..."
+    echo ""
+    "$ROOT_DIR/asgard-build" "$GAME_NAME"
+    echo ""
 fi
 
 DOCKER_EXTRA_ARGS=()

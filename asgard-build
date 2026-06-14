@@ -2,7 +2,8 @@
 
 set -e
 
-ROOT_DIR="$(pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT_DIR"   # so build/, start.sh and the docker build context resolve here
 GAMES_DIR="$ROOT_DIR/games"
 GAME_NAME=$1
 
@@ -32,6 +33,36 @@ fi
 if [[ -d "build" ]]; then
     echo "A build may still be in progress. Please make sure no build is running then delete the 'build' folder."
     exit 2
+fi
+
+# The Dockerfile bakes the compatibility libraries from lib/ into the image
+# (COPY lib/libstdc++* ... etc). An empty lib/ makes the build fail partway
+# through, so make sure the libs are present first — offering to fetch them.
+LIB_DIR="$ROOT_DIR/lib"
+have_libs() { ls "$LIB_DIR"/libstdc++* "$LIB_DIR"/libSDL* "$LIB_DIR"/libsmpeg* &>/dev/null; }
+if ! have_libs; then
+    echo "No compatibility libraries found in lib/."
+    echo "These get baked into the Docker image and are required to build."
+    echo ""
+    if [[ -x "$ROOT_DIR/bundle-libs.sh" ]]; then
+        read -rp "Run bundle-libs.sh now to copy them from your game install? [Y/n]: " ANS
+        if [[ ! "$ANS" =~ ^[Nn] ]]; then
+            echo ""
+            "$ROOT_DIR/bundle-libs.sh"
+            echo ""
+        fi
+    else
+        echo "(bundle-libs.sh not found — run it manually to populate lib/.)"
+    fi
+    if ! have_libs; then
+        echo "WARNING: lib/ still has no compatibility libraries."
+        echo "The Docker build will likely fail at the 'COPY lib/...' steps."
+        read -rp "Try to build anyway? [y/N]: " CONFIRM_LIBS
+        if [[ ! "$CONFIRM_LIBS" =~ ^[Yy] ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
 fi
 
 if [[ -d "$GAMES_DIR/$GAME_NAME" ]]; then
