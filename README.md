@@ -37,14 +37,27 @@ cd tribes-2-docker
 ```
 
 That's it. An arrow-key menu appears so you can tell it where your Tribes 2 game
-folder is (the folder containing `tribes2.dynamic`, `base/`, etc.):
+folder is (the folder containing `tribes2.dynamic`, `base/`, etc.).
 
-- It lists any **auto-detected** installs — use **↑/↓** and **Enter** to pick one.
-- Or choose **"Browse for a folder..."** to navigate the filesystem:
-  - **↑/↓** highlight a folder, **Open** (Enter) goes inside it,
-    **".. (go up a level)"** goes back up.
-  - **Tab** over to **"Choose THIS folder"** to select where you are. It flags
-    the spot where Tribes 2 is detected.
+**1. Pick a detected install, or browse.** The first screen lists any
+auto-detected game folders. Use **↑/↓** to highlight one and press **Enter** on
+**`<Select>`**. If yours isn't listed, choose **"Browse for a folder..."**.
+(**"Use the copy baked into the image"** runs game files bundled into the image
+instead — see Advanced.)
+
+![Select Game Folder menu](docs/images/menu-select-folder.png)
+
+**2. Browse to your folder and choose it.** The browser shows the folder you're
+currently in at the top, with its sub-folders listed below:
+
+- **↑/↓** highlight a sub-folder, then press **Enter** on **`<Open>`** to go
+  inside it.
+- Highlight **".. (go up a level)"** and **`<Open>`** to go back up.
+- When you're in the right place (it shows **`*** Tribes 2 detected in THIS
+  folder! ***`**), press **Tab** to move to **`<Choose THIS folder>`** and hit
+  **Enter** to select it.
+
+![Browse for folder screen](docs/images/menu-browse-folder.png)
 
 On the **first run** it builds the Docker image automatically (a one-time step
 that takes a few minutes). After that, `./asgard-run` launches straight into the
