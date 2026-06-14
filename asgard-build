@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+set -e
+
+ROOT_DIR="$(pwd)"
+GAMES_DIR="$ROOT_DIR/games"
+GAME_NAME=$1
+
+if [[ ! -d "$GAMES_DIR/$GAME_NAME" ]]; then
+    echo "$GAME_NAME is not present in the games folder"
+    exit 2
+fi
+
+if [[ -d "build" ]]; then
+    echo "A build may still be in progress. Please make sure no build is running then delete the 'build' folder."
+    exit 2
+fi
+cp -r "$GAMES_DIR/$GAME_NAME" "$ROOT_DIR/build"
+if file "build/$GAME_NAME" | grep -q "text"; then
+    sed -i -e 's/^DetectARCH()/DetectARCH\(\)\n{\n\techo "x86"\n}\nIntoTheVOID\(\)/' "build/$GAME_NAME"
+fi
+echo "cd game" > start.sh
+echo "if [ -e ${GAME_NAME}.sh ]; then ./${GAME_NAME}.sh; else ./${GAME_NAME}; fi" >> start.sh
+echo "exit" >> start.sh
+
+USER_UID=${SUDO_UID:-$(id -u)}
+USER_GID=${SUDO_GID:-$(id -g)}
+docker build \
+    --build-arg USER_UID="$USER_UID" \
+    --build-arg USER_GID="$USER_GID" \
+    -t "$GAME_NAME" .
+
+rm -rf build
+rm start.sh
