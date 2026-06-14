@@ -88,6 +88,27 @@ automatically. It can live anywhere on your disk.
 
 ## Troubleshooting
 
+**Nothing happens — the menu finishes but the game never starts (no error):**
+The container needs to reach your X server, which requires `xhost`. It's
+preinstalled on Ubuntu/Debian but **not on Arch/CachyOS or Fedora**. Install it:
+```bash
+# Arch / CachyOS
+sudo pacman -S --needed xorg-xhost libnewt
+# Fedora
+sudo dnf install xorg-x11-server-utils newt
+```
+(`libnewt`/`newt` also gives you the nice arrow-key menu instead of the text
+fallback.) `asgard-run` now warns instead of silently aborting when `xhost` is
+missing, and it works the same on **Wayland** (via XWayland) — you don't need an
+X11 session.
+
+**`docker: permission denied` or "Docker not usable":**
+Make sure the daemon is running and your user is in the `docker` group:
+```bash
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # then log out and back in
+```
+
 **Game segfaults on startup with `BUG! Going down hard...` (missing intro movie):**
 If your game copy is missing `base/textures/T2IntroC15.mpg`, the intro player can crash. Skip the intro by adding the preference to your local config:
 ```bash

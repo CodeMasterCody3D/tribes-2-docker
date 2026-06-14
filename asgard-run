@@ -9,6 +9,21 @@ HOST_GAME_PATH=$2
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GAMES_DIR="$ROOT_DIR/games"
 
+# Preflight: Docker is the only hard requirement.
+if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: Docker is not installed (or not on PATH)."
+    echo "  Arch/CachyOS:  sudo pacman -S docker && sudo systemctl enable --now docker"
+    echo "  Debian/Ubuntu: sudo apt install docker.io && sudo systemctl enable --now docker"
+    echo "  Then add yourself to the docker group: sudo usermod -aG docker \$USER  (log out/in)"
+    exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker is installed but not usable by this user."
+    echo "  Start it:           sudo systemctl enable --now docker"
+    echo "  Fix permissions:    sudo usermod -aG docker \$USER   (then log out and back in)"
+    exit 1
+fi
+
 # Pick the game automatically — the user's only job is to point at the game
 # folder, so don't bother them with this when there's only one game.
 if [[ -z "$GAME_NAME" ]]; then
@@ -235,15 +250,30 @@ if [[ -n "$EXTRA_ENV" ]]; then
     DOCKER_EXTRA_ARGS+=(-e "$EXTRA_ENV")
 fi
 
-if [ -n "$SUDO_USER" ]; then
-    sudo -u "$SUDO_USER" DISPLAY=$DISPLAY xhost +local:docker > /dev/null 2>&1
+# Grant the container access to the X server. 'xhost' lives in 'xorg-xhost' on
+# Arch/Fedora and 'x11-xserver-utils' on Debian/Ubuntu. A missing or failing
+# xhost must NOT abort the run (set -e) — warn and continue.
+if command -v xhost >/dev/null 2>&1; then
+    if [ -n "$SUDO_USER" ]; then
+        sudo -u "$SUDO_USER" DISPLAY=$DISPLAY xhost +local:docker >/dev/null 2>&1 || true
+    else
+        xhost +local:docker >/dev/null 2>&1 || true
+    fi
 else
-    xhost +local:docker > /dev/null 2>&1
+    echo "NOTE: 'xhost' is not installed — the game window may fail to open."
+    echo "      Install it, then re-run:"
+    echo "        Arch/CachyOS:   sudo pacman -S --needed xorg-xhost"
+    echo "        Debian/Ubuntu:  sudo apt install x11-xserver-utils"
+    echo "        Fedora:         sudo dnf install xorg-x11-server-utils"
 fi
 
 GAMESCOPE_CMD=""
 if [[ "$USE_GAMESCOPE" == "1" ]]; then
-    GAMESCOPE_CMD="gamescope -w $GAMESCOPE_WIDTH -h $GAMESCOPE_HEIGHT $GAMESCOPE_ARGS --"
+    if command -v gamescope >/dev/null 2>&1; then
+        GAMESCOPE_CMD="gamescope -w $GAMESCOPE_WIDTH -h $GAMESCOPE_HEIGHT $GAMESCOPE_ARGS --"
+    else
+        echo "NOTE: gamescope not installed — running without it."
+    fi
 fi
 
 uid=${SUDO_UID:-$(id -u)}
@@ -251,26 +281,46 @@ if [ -n "$SUDO_USER" ]; then
     HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
     XDG_RUNTIME_DIR="/run/user/$uid"
 fi
+
+# The game is an X11 app. On Wayland it draws via XWayland; if DISPLAY is unset,
+# fall back to :0 so it still has somewhere to connect.
+if [[ -z "$DISPLAY" ]]; then
+    echo "NOTE: \$DISPLAY was empty; defaulting to :0 (XWayland)."
+    DISPLAY=":0"
+fi
+
+# Add host-integration mounts/devices only when the source actually exists, so
+# the same command works across X11/Wayland, PulseAudio/PipeWire and distros.
+# A missing bind-mount source otherwise makes Docker create a junk root-owned
+# dir (which is what broke audio/display on non-Ubuntu hosts).
+add_mount()  { if [[ -e "$1" ]]; then DOCKER_EXTRA_ARGS+=(-v "$1:$2:${3:-rw}"); fi; return 0; }
+add_device() { if [[ -e "$1" ]]; then DOCKER_EXTRA_ARGS+=(--device "$1"); fi; return 0; }
+
+mkdir -p "${HOME}/.loki"   # game writes prefs/saves here; ensure it's user-owned
+
+add_device /dev/snd
+add_device /dev/dri
+add_mount /etc/machine-id /etc/machine-id ro
+add_mount /var/lib/dbus   /var/lib/dbus   rw
+add_mount "${XDG_RUNTIME_DIR}/pulse/native"  "${XDG_RUNTIME_DIR}/pulse/native"  rw
+add_mount "${HOME}/.config/pulse/cookie"     /home/loki/.config/pulse/cookie    ro
+add_mount "${HOME}/.Xauthority"              /home/loki/.Xauthority             rw
+add_mount /tmp/.X11-unix  /tmp/.X11-unix  rw
+add_mount "${HOME}/.loki" /home/loki/.loki rw
+add_mount "${XDG_RUNTIME_DIR}" "/run/loki/$uid" rw
+add_mount /media/cdrom /cdrom rw
+
+# Host 'audio' group GID, so the container user can access /dev/snd (if present).
+AUDIO_GID=$(getent group audio | cut -d: -f3)
+if [[ -n "$AUDIO_GID" ]]; then DOCKER_EXTRA_ARGS+=(--group-add "$AUDIO_GID"); fi
+
 $GAMESCOPE_CMD $HOST_WRAPPER docker run \
     --rm \
-    -e DISPLAY=$DISPLAY \
     --privileged \
     --network host \
-    --device /dev/snd \
-    --device /dev/dri \
     --group-add=audio \
-    -v /etc/machine-id:/etc/machine-id \
-    -v /var/lib/dbus:/var/lib/dbus \
     -e PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native \
-    -v ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native \
-    -v ${HOME}/.config/pulse/cookie:/home/loki/.config/pulse/cookie:ro \
-    --group-add $(getent group audio | cut -d: -f3) \
-    -v "${HOME}/.Xauthority:/home/loki/.Xauthority:rw" \
-    -v "${HOME}/.loki:/home/loki/.loki:rw" \
-    -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
-    -v "${XDG_RUNTIME_DIR}:/run/loki/$uid:rw" \
-    -v "/media/cdrom:/cdrom" \
-    --env=DISPLAY \
+    --env=DISPLAY=$DISPLAY \
     --env=XDG_RUNTIME_DIR=/run/user/$uid \
     "${DOCKER_EXTRA_ARGS[@]}" \
     -e GAME_NAME="$GAME_NAME" \
