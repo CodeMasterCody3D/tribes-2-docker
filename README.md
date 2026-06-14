@@ -83,14 +83,16 @@ automatically. It can live anywhere on your disk.
   ```bash
   ASGARD_PICK=1 ./asgard-run
   ```
-- **Pass extra flags to the game** — just add them; any argument starting with
-  `-` (and everything after it) is forwarded straight to `tribes2.dynamic`,
-  after the `-nologin` the launcher already adds. No need to run the binary by
-  hand, and no `--` required once the folder is remembered:
+- **Pass flags to the game** — just add them; any argument starting with `-`
+  (and everything after it) is forwarded straight to `tribes2.dynamic`. No flags
+  are forced, so you have full control. No need to run the binary by hand, and no
+  `--` required once the folder is remembered:
   ```bash
   ./asgard-run tribes2 -nologin -w -s -mod Classic
-  ./asgard-run tribes2 -window
+  ./asgard-run tribes2 -nologin            # -nologin = offline (skip dead login servers)
   ```
+  > For offline play pass `-nologin` yourself — without it the game tries the
+  > defunct WON/Sierra login servers.
   First time (or to set a new folder), put the path before the flags:
   ```bash
   ./asgard-run tribes2 /path/to/your/tribes2 -window -mod Classic
