@@ -23,10 +23,6 @@ if [[ -z "$SRC_DIR" ]]; then
     echo "This is the folder containing files like libSDL-1.2.so.0,"
     echo "libstdc++-libc6.2-2.so.3, libsmpeg-0.4.so.0, etc."
     echo ""
-    echo "Examples:"
-    echo "  /home/cody/tribes2/asgard/lib"
-    echo "  /media/cdrom/Tribes2/Linux/lib"
-    echo ""
 
     # Try to auto-detect common locations
     CANDIDATES=()
@@ -39,7 +35,7 @@ if [[ -z "$SRC_DIR" ]]; then
         "/mnt/cdrom/Tribes2/Linux/lib" \
         "/opt/tribes2/lib" \
         "/usr/local/games/tribes2/lib"; do
-        if [[ -d "$guess" ]] && [[ -n "$(ls "$guess"/libstdc++* "$guess"/libSDL* "$guess"/libsmpeg* 2>/dev/null)" ]]; then
+        if [[ -d "$guess" ]] && ls "$guess"/libstdc++* "$guess"/libSDL* "$guess"/libsmpeg* &>/dev/null; then
             CANDIDATES+=("$guess")
         fi
     done
@@ -49,21 +45,16 @@ if [[ -z "$SRC_DIR" ]]; then
         for i in "${!CANDIDATES[@]}"; do
             echo "  $((i+1)). ${CANDIDATES[$i]}"
         done
-        echo "  0. Enter a custom path"
         echo ""
-        read -rp "Select [0-${#CANDIDATES[@]}] (default: 1): " CHOICE
-        CHOICE="${CHOICE:-1}"
+        read -rp "Enter a path directly, or pick a number [1-${#CANDIDATES[@]}] (default: 1): " INPUT
+        INPUT="${INPUT:-1}"
 
-        if [[ "$CHOICE" =~ ^[0-9]+$ ]] && [[ "$CHOICE" -ge 1 ]] && [[ "$CHOICE" -le ${#CANDIDATES[@]} ]]; then
-            SRC_DIR="${CANDIDATES[$((CHOICE-1))]}"
-        elif [[ "$CHOICE" == "0" ]]; then
-            read -rp "Enter path: " SRC_DIR
+        if [[ "$INPUT" =~ ^[0-9]+$ ]] && [[ "$INPUT" -ge 1 ]] && [[ "$INPUT" -le ${#CANDIDATES[@]} ]]; then
+            SRC_DIR="${CANDIDATES[$((INPUT-1))]}"
         else
-            echo "Invalid choice."
-            exit 1
+            SRC_DIR="$INPUT"
         fi
     else
-        echo "(No common locations found automatically.)"
         read -rp "Enter path: " SRC_DIR
     fi
 
@@ -78,7 +69,7 @@ if [[ ! -d "$SRC_DIR" ]]; then
 fi
 
 # Verify it looks like a game lib directory
-if [[ -z "$(ls "$SRC_DIR"/libstdc++* "$SRC_DIR"/libSDL* "$SRC_DIR"/libsmpeg* 2>/dev/null)" ]]; then
+if ! ls "$SRC_DIR"/libstdc++* "$SRC_DIR"/libSDL* "$SRC_DIR"/libsmpeg* &>/dev/null; then
     echo "WARNING: '$SRC_DIR' doesn't seem to contain expected library files."
     echo "Expected files like: libstdc++-libc6.2-2.so.3, libSDL-1.2.so.0, libsmpeg-0.4.so.0"
     read -rp "Continue anyway? [y/N]: " CONFIRM

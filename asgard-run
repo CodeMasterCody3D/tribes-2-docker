@@ -49,18 +49,14 @@ if [[ -z "$HOST_GAME_PATH" ]]; then
         for i in "${!CANDIDATES[@]}"; do
             echo "  $((i+1)). ${CANDIDATES[$i]}"
         done
-        echo "  0. Enter a custom path (or leave empty for built-in)"
         echo ""
-        read -rp "Select [0-${#CANDIDATES[@]}] (default: 1): " CHOICE
-        CHOICE="${CHOICE:-1}"
+        read -rp "Enter a path directly, or pick a number [1-${#CANDIDATES[@]}] (default: 1): " INPUT
+        INPUT="${INPUT:-1}"
 
-        if [[ "$CHOICE" =~ ^[0-9]+$ ]] && [[ "$CHOICE" -ge 1 ]] && [[ "$CHOICE" -le ${#CANDIDATES[@]} ]]; then
-            HOST_GAME_PATH="${CANDIDATES[$((CHOICE-1))]}"
-        elif [[ "$CHOICE" == "0" ]]; then
-            read -rp "Enter path (or empty for built-in): " HOST_GAME_PATH
+        if [[ "$INPUT" =~ ^[0-9]+$ ]] && [[ "$INPUT" -ge 1 ]] && [[ "$INPUT" -le ${#CANDIDATES[@]} ]]; then
+            HOST_GAME_PATH="${CANDIDATES[$((INPUT-1))]}"
         else
-            echo "Invalid choice."
-            exit 1
+            HOST_GAME_PATH="$INPUT"
         fi
     else
         echo "(No common locations found automatically.)"
