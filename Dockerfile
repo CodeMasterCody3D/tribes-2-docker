@@ -70,7 +70,6 @@ RUN groupmod --gid $USER_GID "$USER"
 WORKDIR /home/loki
 COPY ./build /home/loki/game
 COPY ./start.sh /home/loki/start.sh
-RUN cat /etc/skel/.bashrc start.sh > .bashrc
 RUN chown $USER_UID:$USER_GID -R /home/loki/
 USER $USER
 
