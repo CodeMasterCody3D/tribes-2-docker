@@ -12,8 +12,8 @@ It solves modern system issues (NPTL threading conflicts, OSS/ALSA audio locks, 
    The native game binary freezes or deadlocks under modern host kernels due to NPTL. Running the engine inside a 32-bit Ubuntu 16.04 container isolates it under a compatible threading context.
 2. **TrueType Font Fallbacks (Bypasses Exit Code 1):**
    The GUI profile manager requires `Arial.ttf` and `Verdana Bold.ttf` to start up the main menu shell. If these are missing, the client exits cleanly with status `1`. This repository bundles open-source Liberation Sans fonts renamed as drop-in replacements for Arial/Verdana.
-3. **Missing Intro Movie Bypass (Bypasses Segfault):**
-   Passing the `-nologin` flag bypasses defunct WON/Sierra login servers but makes the game load the intro movie. If `base/textures/T2IntroC15.mpg` is missing, the smpeg engine suffers a null pointer dereference, causing a segmentation fault (`BUG! Going down hard...`). Setting `$pref::SkipIntro = 1;` in `ClientPrefs.cs` resolves this.
+3. **Intro Movie Handling (situational):**
+   Passing the `-nologin` flag bypasses defunct WON/Sierra login servers but makes the game load the intro movie. On most complete game copies the intro plays (or is skipped by the engine) without issue. However, if `base/textures/T2IntroC15.mpg` is missing on your copy, the smpeg engine can null-dereference and segfault (`BUG! Going down hard...`). If that happens, set `$pref::SkipIntro = 1;` in `ClientPrefs.cs` — see Troubleshooting below.
 4. **Audio Routing via PulseAudio OSS wrapper:**
    PulseAudio OSS emulation (`padsp`) is wrapped around the execution launcher to route OSS `/dev/dsp` calls through modern audio endpoints.
 5. **Software OpenGL Rendering:**
@@ -45,15 +45,6 @@ This populates the `lib/` directory with the required `.so` files and compiles t
 
 ### 3b. (Optional) Add Loki Compatibility Libraries
 If you have additional Loki compatibility shared libraries (e.g. for Civ:CTP), place them in the `lib/` folder at the repo root. The build will copy them into the container's `/usr/lib/`.
-
-### 3. Skip the Intro Movie in Preferences
-To prevent the Smpeg movie player from segfaulting on the missing movie file, set the skip intro preference in your local preferences file.
-
-Run the following command to append the preference to your game configuration:
-```bash
-mkdir -p ~/.loki/tribes2/base/prefs/
-echo '$pref::SkipIntro = 1;' >> ~/.loki/tribes2/base/prefs/ClientPrefs.cs
-```
 
 ---
 
@@ -88,3 +79,15 @@ echo '$pref::SkipIntro = 1;' >> ~/.loki/tribes2/base/prefs/ClientPrefs.cs
    baked into the image at build time.
 
 The wrapper script `run_t2.sh` automatically forces the game to launch in offline mode (`-nologin`) and route output correctly.
+
+---
+
+## Troubleshooting
+
+**Game segfaults on startup with `BUG! Going down hard...` (missing intro movie):**
+If your game copy is missing `base/textures/T2IntroC15.mpg`, the intro player can crash. Skip the intro by adding the preference to your local config:
+```bash
+mkdir -p ~/.loki/tribes2/base/prefs/
+echo '$pref::SkipIntro = 1;' >> ~/.loki/tribes2/base/prefs/ClientPrefs.cs
+```
+(Most complete game copies don't need this — the intro plays fine.)
