@@ -30,6 +30,7 @@ RUN \
         libsdl-ttf2.0-0 \
         libsdl-sound1.2 \
         libsdl-image1.2 \
+        libsmpeg0 \
         libxml2 \
         pulseaudio-utils \
         xdotool && \
@@ -46,6 +47,17 @@ RUN ln -s /usr/lib/i386-linux-gnu/mesa/libGL.so.1 /usr/lib/libGL.so && \
     ln -s /usr/lib/i386-linux-gnu/mesa/libGL.so.1 /usr/lib/libGL.so.1
 # Symlink libaudiofile.so to a known location for Heavy Gear 2.
 RUN ln -s /usr/lib/i386-linux-gnu/libaudiofile.so.1 /usr/lib/libaudiofile.so.0
+
+# Copy old GCC 2.95 / era-specific compat libs from the host's lib/ directory.
+# These are needed for binaries compiled with egcs/GCC 2.95 (e.g. Tribes 2).
+COPY lib/libstdc++* /usr/lib/
+COPY lib/libSDL* /usr/lib/
+COPY lib/libsmpeg* /usr/lib/
+COPY lib/libsmjpeg* /usr/lib/
+COPY lib/libttf* /usr/lib/
+
+# Copy and preload the __ti9exception shim for GCC 2.95 binaries
+COPY lib/libti9exception.so /usr/lib/
 
 # Copy a subset of the "Loki compat libs" to a standard location.
 # This has only been useful for Civ:CTP so far.

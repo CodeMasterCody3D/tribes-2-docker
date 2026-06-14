@@ -1,0 +1,8 @@
+# Ignore all binary files in lib/ — these are game-specific shared libraries
+# that should be provided by the user or bundled via the helper script.
+*.so
+*.so.*
+*.c
+*.o
+# Keep .gitkeep so the directory is tracked
+!.gitkeep

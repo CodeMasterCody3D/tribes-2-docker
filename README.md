@@ -34,8 +34,17 @@ Copy the contents of your original *Tribes 2* Linux game directory (specifically
 
 **Alternatively**, you can skip the copy entirely and point `asgard-run` at your existing game folder on the host. The container will read the files live via a bind mount — no duplication needed. See the "Run the game" section below.
 
-### 3a. (Optional) Add Loki Compatibility Libraries
-If you have a `lib/` directory with Loki compatibility shared libraries (e.g. for Civ:CTP), place them in the `lib/` folder at the repo root. The build will copy them into the container's `/usr/lib/`. This directory can be empty (it ships with a `.gitkeep`).
+### 3a. Bundle Compatibility Libraries
+The Docker image needs old-era shared libraries (libSDL, libsmpeg, libstdc++ from GCC 2.95) to run game binaries compiled with egcs/GCC 2.95. Use the provided helper script to copy them from your game installation:
+
+```bash
+./bundle-libs.sh /home/cody/tribes2/asgard/lib
+```
+
+This populates the `lib/` directory with the required `.so` files and compiles the `__ti9exception` shim needed for the old C++ ABI. The `lib/.gitignore` keeps these binaries out of git — they're rebuilt per-user from their own game files.
+
+### 3b. (Optional) Add Loki Compatibility Libraries
+If you have additional Loki compatibility shared libraries (e.g. for Civ:CTP), place them in the `lib/` folder at the repo root. The build will copy them into the container's `/usr/lib/`.
 
 ### 3. Skip the Intro Movie in Preferences
 To prevent the Smpeg movie player from segfaulting on the missing movie file, set the skip intro preference in your local preferences file.

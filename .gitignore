@@ -1,0 +1,10 @@
+# Build artifacts
+build/
+start.sh
+
+# Binary libraries (tracked via .gitignore inside lib/)
+# but also ignore at repo root for safety
+*.pyc
+__pycache__/
+*.swp
+.DS_Store
