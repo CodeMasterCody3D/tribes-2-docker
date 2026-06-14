@@ -2,10 +2,30 @@
 
 set -e
 
-GAME_NAME=$1
-# Optional: path to the game folder on the host (bind-mounted into container)
-# If not provided, you'll be prompted or it falls back to the baked-in copy
-HOST_GAME_PATH=$2
+# Usage: asgard-run [GAME] [HOST_GAME_PATH] [-- GAME_ARGS...]
+#
+# Anything after a literal "--" is passed straight through to the game, e.g.
+#   ./asgard-run tribes2 /path/to/t2 -- -window -mod classic
+#   ./asgard-run -- -dedicated            (game/folder still auto-picked/prompted)
+# You can also set GAME_ARGS in the environment:
+#   GAME_ARGS="-window -mod classic" ./asgard-run
+# Note: the launcher already applies -nologin; these flags are appended after it.
+GAME_ARGS=(${GAME_ARGS:-})          # seed from the environment if provided
+POSITIONAL=()
+_after_sep=0
+for _a in "$@"; do
+    if [[ $_after_sep -eq 1 ]]; then
+        GAME_ARGS+=("$_a")
+    elif [[ "$_a" == "--" ]]; then
+        _after_sep=1
+    else
+        POSITIONAL+=("$_a")
+    fi
+done
+GAME_NAME="${POSITIONAL[0]:-}"
+# Optional: path to the game folder on the host (bind-mounted into container).
+# If not provided, you'll be prompted (or it falls back to the baked-in copy).
+HOST_GAME_PATH="${POSITIONAL[1]:-}"
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GAMES_DIR="$ROOT_DIR/games"
 
@@ -329,4 +349,5 @@ $GAMESCOPE_CMD $HOST_WRAPPER docker run \
     -e USE_STRACE="$USE_STRACE" \
     -e USE_PADSP="$USE_PADSP" \
     $GAME_NAME \
-    bash --norc -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; CMD=""; if [ -n "$LAUNCH_CMD" ]; then CMD="$LAUNCH_CMD"; elif [ -e "${GAME_NAME}.sh" ]; then CMD="./${GAME_NAME}.sh"; elif [ -e "${GAME_NAME}.dynamic" ]; then CMD="./${GAME_NAME}.dynamic -nologin"; else CMD="./${GAME_NAME}"; fi; exec $STRACE $PADSP $CMD'
+    bash --norc -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; CMD=""; if [ -n "$LAUNCH_CMD" ]; then CMD="$LAUNCH_CMD"; elif [ -e "${GAME_NAME}.sh" ]; then CMD="./${GAME_NAME}.sh"; elif [ -e "${GAME_NAME}.dynamic" ]; then CMD="./${GAME_NAME}.dynamic -nologin"; else CMD="./${GAME_NAME}"; fi; exec $STRACE $PADSP $CMD "$@"' \
+    _ "${GAME_ARGS[@]}"

@@ -76,6 +76,17 @@ automatically. It can live anywhere on your disk.
   ```bash
   ./asgard-run tribes2 /path/to/your/tribes2
   ```
+- **Pass extra flags to the game** — put them after a `--`. They're forwarded
+  straight to `tribes2.dynamic` (after the `-nologin` the launcher already adds),
+  so you don't have to run the binary by hand:
+  ```bash
+  ./asgard-run tribes2 /path/to/your/tribes2 -- -window -mod classic
+  ./asgard-run -- -dedicated          # game + folder still auto-picked/prompted
+  ```
+  Or use the `GAME_ARGS` environment variable instead of `--`:
+  ```bash
+  GAME_ARGS="-window -mod classic" ./asgard-run
+  ```
 - **Bake the game into the image** instead of bind-mounting: copy your game files
   into `games/tribes2/` before the first run. Then `./asgard-run` with no folder
   works offline from the image.
