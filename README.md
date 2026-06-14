@@ -76,16 +76,29 @@ automatically. It can live anywhere on your disk.
   ```bash
   ./asgard-run tribes2 /path/to/your/tribes2
   ```
-- **Pass extra flags to the game** — put them after a `--`. They're forwarded
-  straight to `tribes2.dynamic` (after the `-nologin` the launcher already adds),
-  so you don't have to run the binary by hand:
+- **The game folder is remembered** between runs (saved in
+  `~/.config/asgard/<game>.path`). After the first time you pick it, you never
+  have to again — just run `./asgard-run tribes2`. To choose a different folder,
+  either pass a new path, or force the picker:
   ```bash
-  ./asgard-run tribes2 /path/to/your/tribes2 -- -window -mod classic
-  ./asgard-run -- -dedicated          # game + folder still auto-picked/prompted
+  ASGARD_PICK=1 ./asgard-run
   ```
-  Or use the `GAME_ARGS` environment variable instead of `--`:
+- **Pass extra flags to the game** — just add them; any argument starting with
+  `-` (and everything after it) is forwarded straight to `tribes2.dynamic`,
+  after the `-nologin` the launcher already adds. No need to run the binary by
+  hand, and no `--` required once the folder is remembered:
   ```bash
-  GAME_ARGS="-window -mod classic" ./asgard-run
+  ./asgard-run tribes2 -nologin -w -s -mod Classic
+  ./asgard-run tribes2 -window
+  ```
+  First time (or to set a new folder), put the path before the flags:
+  ```bash
+  ./asgard-run tribes2 /path/to/your/tribes2 -window -mod Classic
+  ```
+  You can also force the boundary with `--`, or use the `GAME_ARGS` env var:
+  ```bash
+  ./asgard-run tribes2 -- -window
+  GAME_ARGS="-window -mod Classic" ./asgard-run
   ```
 - **Bake the game into the image** instead of bind-mounting: copy your game files
   into `games/tribes2/` before the first run. Then `./asgard-run` with no folder

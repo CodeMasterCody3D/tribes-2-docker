@@ -2,24 +2,32 @@
 
 set -e
 
-# Usage: asgard-run [GAME] [HOST_GAME_PATH] [-- GAME_ARGS...]
+# Usage: asgard-run [GAME] [HOST_GAME_PATH] [GAME_ARGS...]
 #
-# Anything after a literal "--" is passed straight through to the game, e.g.
-#   ./asgard-run tribes2 /path/to/t2 -- -window -mod classic
-#   ./asgard-run -- -dedicated            (game/folder still auto-picked/prompted)
-# You can also set GAME_ARGS in the environment:
-#   GAME_ARGS="-window -mod classic" ./asgard-run
-# Note: the launcher already applies -nologin; these flags are appended after it.
+# Any flag-like argument (starting with "-") and everything after it is passed
+# straight through to the game. The game folder is remembered between runs, so
+# after the first time you can just do:
+#   ./asgard-run tribes2 -nologin -mod Classic
+#   ./asgard-run tribes2 -window
+# First time / to set the folder explicitly, give the path before the flags:
+#   ./asgard-run tribes2 /path/to/t2 -window
+# You can also force the boundary with "--", or set GAME_ARGS in the env:
+#   ./asgard-run tribes2 -- -window
+#   GAME_ARGS="-window -mod Classic" ./asgard-run
+# Re-pick the folder any time:  ASGARD_PICK=1 ./asgard-run
+# Note: the launcher already applies -nologin; your flags are appended after it.
 GAME_ARGS=(${GAME_ARGS:-})          # seed from the environment if provided
 POSITIONAL=()
-_after_sep=0
+_collect=0
 for _a in "$@"; do
-    if [[ $_after_sep -eq 1 ]]; then
+    if [[ $_collect -eq 1 ]]; then
         GAME_ARGS+=("$_a")
     elif [[ "$_a" == "--" ]]; then
-        _after_sep=1
+        _collect=1                       # explicit boundary (the -- is dropped)
+    elif [[ "$_a" == -* ]]; then
+        _collect=1; GAME_ARGS+=("$_a")   # first flag: it and the rest are game args
     else
-        POSITIONAL+=("$_a")
+        POSITIONAL+=("$_a")              # bare words: game name, then host folder
     fi
 done
 GAME_NAME="${POSITIONAL[0]:-}"
@@ -154,7 +162,23 @@ select_game_folder() {
     esac
 }
 
-# If no host game path provided, ask — graphical arrow-key menu when possible.
+# Remember the chosen game folder between runs (saved per game).
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/asgard"
+SAVED_PATH_FILE="$STATE_DIR/${GAME_NAME}.path"
+
+# No folder on the command line? Reuse the last one we saved, unless ASGARD_PICK=1
+# forces the picker.
+if [[ -z "$HOST_GAME_PATH" && -z "${ASGARD_PICK:-}" && -f "$SAVED_PATH_FILE" ]]; then
+    _saved="$(cat "$SAVED_PATH_FILE" 2>/dev/null || true)"
+    if [[ -n "$_saved" && -d "$_saved" ]]; then
+        HOST_GAME_PATH="$_saved"
+        echo "Using saved game folder: $HOST_GAME_PATH"
+        echo "(choose a different one with:  ASGARD_PICK=1 ./asgard-run )"
+        echo ""
+    fi
+fi
+
+# If still no host game path, ask — graphical arrow-key menu when possible.
 if [[ -z "$HOST_GAME_PATH" ]]; then
     if command -v whiptail >/dev/null 2>&1 && [[ -t 0 && -t 1 ]]; then
         if ! HOST_GAME_PATH="$(select_game_folder)"; then
@@ -184,6 +208,13 @@ if [[ -z "$HOST_GAME_PATH" ]]; then
     # Expand ~
     HOST_GAME_PATH="${HOST_GAME_PATH/#\~/$HOME}"
     echo ""
+fi
+
+# Remember a valid choice for next time (skips the picker on future runs).
+if [[ -n "$HOST_GAME_PATH" && -d "$HOST_GAME_PATH" ]]; then
+    HOST_GAME_PATH="$(cd "$HOST_GAME_PATH" && pwd)"   # normalize to absolute
+    mkdir -p "$STATE_DIR"
+    printf '%s\n' "$HOST_GAME_PATH" > "$SAVED_PATH_FILE" 2>/dev/null || true
 fi
 
 # Defaults (can be overridden by per-game asgard.cfg)
