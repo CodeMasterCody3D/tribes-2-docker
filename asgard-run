@@ -3,6 +3,9 @@
 set -e
 
 GAME_NAME=$1
+# Optional: path to the game folder on the host (bind-mounted into container)
+# If not provided, uses the baked-in copy from the Docker image
+HOST_GAME_PATH=$2
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GAMES_DIR="$ROOT_DIR/games"
 
@@ -13,13 +16,13 @@ USE_GAMESCOPE=${USE_GAMESCOPE:-1}
 USE_PADSP=${USE_PADSP:-1}
 SOFTWARE_GL=${SOFTWARE_GL:-1}
 MESA_YEAR=${MESA_YEAR:-}
-SAVE_DIRS=()  # Array of "host_dir:container_dir" pairs
-LAUNCH_CMD=""  # Custom launch command (default: ./<game> or ./<game>.sh)
-PRE_LAUNCH=""  # Commands to run inside the container before launching the game
-USE_STRACE=${USE_STRACE:-1}  # Workaround for games with init race conditions
-GAMESCOPE_ARGS=""  # Extra gamescope arguments
-HOST_WRAPPER=""  # Command to wrap the docker run (e.g. "pasuspender --" to free /dev/dsp)
-EXTRA_ENV=""  # Extra environment variable to pass into container (KEY=VALUE)
+SAVE_DIRS=()
+LAUNCH_CMD=""
+PRE_LAUNCH=""
+USE_STRACE=${USE_STRACE:-1}
+GAMESCOPE_ARGS=""
+HOST_WRAPPER=""
+EXTRA_ENV=""
 
 # Source per-game config if it exists
 if [[ -f "$ROOT_DIR/config/$GAME_NAME.cfg" ]]; then
@@ -33,6 +36,19 @@ fi
 if [[ -n "$MESA_YEAR" ]]; then
     DOCKER_EXTRA_ARGS+=(-e "MESA_EXTENSION_MAX_YEAR=$MESA_YEAR")
 fi
+
+# If a host game path is provided, bind-mount it over the container's /home/loki/game
+# This avoids copying game files into the image at build time.
+if [[ -n "$HOST_GAME_PATH" ]]; then
+    if [[ ! -d "$HOST_GAME_PATH" ]]; then
+        echo "ERROR: Host game path '$HOST_GAME_PATH' does not exist or is not a directory."
+        exit 2
+    fi
+    HOST_GAME_PATH="$(cd "$HOST_GAME_PATH" && pwd)"  # resolve to absolute path
+    DOCKER_EXTRA_ARGS+=(-v "$HOST_GAME_PATH:/home/loki/game:ro")
+    echo "Bind-mounting host game: $HOST_GAME_PATH -> /home/loki/game"
+fi
+
 for save_dir in "${SAVE_DIRS[@]}"; do
     host_dir="${save_dir%%:*}"
     container_dir="${save_dir#*:}"
@@ -41,7 +57,6 @@ for save_dir in "${SAVE_DIRS[@]}"; do
 done
 
 # Pass /dev/dsp if available (OSS emulation via snd-pcm-oss kernel module)
-# Note: --privileged exposes all /dev/dsp* devices; use SDL_PATH_DSP env var to select one
 if [[ -e /dev/dsp ]]; then
     DOCKER_EXTRA_ARGS+=(--device /dev/dsp)
 fi
