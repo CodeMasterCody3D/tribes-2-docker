@@ -6,19 +6,41 @@ ROOT_DIR="$(pwd)"
 GAMES_DIR="$ROOT_DIR/games"
 GAME_NAME=$1
 
+# If no game name provided, ask
+if [[ -z "$GAME_NAME" ]]; then
+    echo "=== Tribes 2 Docker — Build Container ==="
+    echo ""
+    echo "Available games in $GAMES_DIR/:"
+    ls -1 "$GAMES_DIR/" 2>/dev/null || echo "  (none found)"
+    echo ""
+    read -rp "Enter game name (e.g. tribes2): " GAME_NAME
+    echo ""
+fi
+
 if [[ ! -d "$GAMES_DIR/$GAME_NAME" ]]; then
-    echo "$GAME_NAME is not present in the games folder"
-    exit 2
+    echo "WARNING: '$GAME_NAME' is not present in the games folder."
+    echo "The container will be built without built-in game files."
+    echo "You can still bind-mount a game directory at runtime with asgard-run."
+    echo ""
+    read -rp "Continue anyway? [y/N]: " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy] ]]; then
+        echo "Aborted."
+        exit 1
+    fi
 fi
 
 if [[ -d "build" ]]; then
     echo "A build may still be in progress. Please make sure no build is running then delete the 'build' folder."
     exit 2
 fi
-cp -r "$GAMES_DIR/$GAME_NAME" "$ROOT_DIR/build"
-if file "build/$GAME_NAME" | grep -q "text"; then
-    sed -i -e 's/^DetectARCH()/DetectARCH\(\)\n{\n\techo "x86"\n}\nIntoTheVOID\(\)/' "build/$GAME_NAME"
+
+if [[ -d "$GAMES_DIR/$GAME_NAME" ]]; then
+    cp -r "$GAMES_DIR/$GAME_NAME" "$ROOT_DIR/build"
+    if file "build/$GAME_NAME" | grep -q "text"; then
+        sed -i -e 's/^DetectARCH()/DetectARCH()\n{\n\techo \"x86\"\n}\nIntoTheVOID()/' "build/$GAME_NAME"
+    fi
 fi
+
 echo "cd game" > start.sh
 echo "if [ -e ${GAME_NAME}.sh ]; then ./${GAME_NAME}.sh; else ./${GAME_NAME}; fi" >> start.sh
 echo "exit" >> start.sh
