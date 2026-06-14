@@ -37,7 +37,7 @@ for pattern in libstdc++* libSDL* libsmpeg* libsmjpeg* libttf*; do
         if [[ -f "$f" ]]; then
             cp "$f" "$LIB_DIR/"
             echo "  copied: $(basename "$f")"
-            ((COPIED++))
+            COPIED=$((COPIED + 1))
         fi
     done
 done
