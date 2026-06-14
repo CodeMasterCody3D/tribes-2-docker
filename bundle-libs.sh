@@ -42,26 +42,6 @@ for pattern in libstdc++* libSDL* libsmpeg* libsmjpeg* libttf*; do
     done
 done
 
-# Also copy the ti9exception shim source and compile it
-SHIM_SRC="$LIB_DIR/ti9exception-shim.c"
-cat > "$SHIM_SRC" << 'EOF'
-/* Shim to provide __ti9exception for GCC 2.95 / egcs binaries.
-   Modern libstdc++ dropped this old typeinfo symbol. */
-typedef struct { const void *vptr; const char *name; } __attribute__((aligned(8))) ti9exception;
-static const void *__ti9exception_vtable[2];
-__attribute__((visibility("default"), weak))
-ti9exception __ti9exception = { __ti9exception_vtable, "9exception" };
-EOF
-
-if command -v gcc &>/dev/null; then
-    gcc -shared -fPIC -o "$LIB_DIR/libti9exception.so" "$SHIM_SRC"
-    echo "  compiled: libti9exception.so"
-    ((COPIED++))
-else
-    echo "  WARNING: gcc not found, skipping libti9exception.so compilation"
-    echo "  Install gcc and run: gcc -shared -fPIC -o lib/libti9exception.so lib/ti9exception-shim.c"
-fi
-
 echo ""
 echo "Done. $COPIED files prepared in $LIB_DIR/"
 echo "Run './asgard-build <game>' to build the Docker image with these libraries."

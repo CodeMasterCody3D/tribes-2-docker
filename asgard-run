@@ -109,4 +109,4 @@ $GAMESCOPE_CMD $HOST_WRAPPER docker run \
     -e USE_STRACE="$USE_STRACE" \
     -e USE_PADSP="$USE_PADSP" \
     $GAME_NAME \
-    bash -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && export LD_PRELOAD="/usr/lib/libstdc++-libc6.2-2.so.3:/usr/lib/libti9exception.so" && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; if [ -n "$LAUNCH_CMD" ]; then $STRACE $PADSP $LAUNCH_CMD; elif [ -e "${GAME_NAME}.sh" ]; then $STRACE $PADSP ./${GAME_NAME}.sh; else $STRACE $PADSP ./${GAME_NAME}; fi'
+    bash -c 'cd /home/loki/game && export LD_LIBRARY_PATH=/usr/lib:./lib:$LD_LIBRARY_PATH && [ -n "$PRE_LAUNCH" ] && eval "$PRE_LAUNCH"; STRACE="" && [ "$USE_STRACE" = "1" ] && STRACE="strace -e trace=none -o /dev/null -f"; PADSP="" && [ "$USE_PADSP" = "1" ] && PADSP="padsp"; if [ -n "$LAUNCH_CMD" ]; then $STRACE $PADSP $LAUNCH_CMD; elif [ -e "${GAME_NAME}.sh" ]; then $STRACE $PADSP ./${GAME_NAME}.sh; else $STRACE $PADSP ./${GAME_NAME}; fi'

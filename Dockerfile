@@ -56,9 +56,6 @@ COPY lib/libsmpeg* /usr/lib/
 COPY lib/libsmjpeg* /usr/lib/
 COPY lib/libttf* /usr/lib/
 
-# Copy and preload the __ti9exception shim for GCC 2.95 binaries
-COPY lib/libti9exception.so /usr/lib/
-
 # Copy a subset of the "Loki compat libs" to a standard location.
 # This has only been useful for Civ:CTP so far.
 COPY lib/* /usr/lib/
