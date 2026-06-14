@@ -20,15 +20,11 @@ if [[ -z "$GAME_NAME" ]]; then
     echo ""
 fi
 
-# If no host game path provided, ask
-if [[ -z "$HOST_GAME_PATH" ]]; then
-    echo "Enter the path to your Tribes 2 game directory on this machine."
-    echo "This is the folder containing tribes2.dynamic, base/, etc."
-    echo "Leave empty to use the built-in copy from the Docker image."
-    echo ""
+# --- Interactive game-folder selection ---------------------------------------
 
-    # Try to auto-detect common locations
-    CANDIDATES=()
+# Print any auto-detected Tribes 2 install directories, one per line.
+detect_game_candidates() {
+    local guess
     for guess in \
         "$HOME/t2-linux" \
         "$HOME/Downloads/t2-linux" \
@@ -42,27 +38,105 @@ if [[ -z "$HOST_GAME_PATH" ]]; then
         "/opt/tribes2" \
         "/usr/local/games/tribes2"; do
         if [[ -d "$guess" ]] && [[ -f "$guess/tribes2.dynamic" || -f "$guess/tribes2" ]]; then
-            CANDIDATES+=("$guess")
+            printf '%s\n' "$guess"
         fi
     done
+}
 
-    if [[ ${#CANDIDATES[@]} -gt 0 ]]; then
-        echo "Found possible game directories:"
-        for i in "${!CANDIDATES[@]}"; do
-            echo "  $((i+1)). ${CANDIDATES[$i]}"
-        done
-        echo ""
-        read -rp "Enter a path directly, or pick a number [1-${#CANDIDATES[@]}] (default: 1): " INPUT
-        INPUT="${INPUT:-1}"
+# Arrow-key folder browser (whiptail). Prints the chosen directory to stdout.
+#   [up/down]            highlight a sub-folder
+#   Enter / "Open"       go inside the highlighted folder
+#   Tab -> "Choose ..."  select the folder you are currently in
+#   Esc                  cancel
+browse_for_folder() {
+    local cur
+    cur="$(cd "${1:-$HOME}" 2>/dev/null && pwd)" || cur="$HOME"
+    while true; do
+        local menu=() d note=""
+        [[ "$cur" != "/" ]] && menu+=(".." ".. (go up a level)")
+        while IFS= read -r d; do
+            [[ -n "$d" ]] && menu+=("$d" "[folder] $d")
+        done < <(find "$cur" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | LC_ALL=C sort -f)
+        [[ ${#menu[@]} -eq 0 ]] && menu+=(" " "(no sub-folders here)")
+        if [[ -f "$cur/tribes2.dynamic" || -f "$cur/tribes2" ]]; then
+            note="\n\n  *** Tribes 2 detected in THIS folder! ***"
+        fi
 
-        if [[ "$INPUT" =~ ^[0-9]+$ ]] && [[ "$INPUT" -ge 1 ]] && [[ "$INPUT" -le ${#CANDIDATES[@]} ]]; then
-            HOST_GAME_PATH="${CANDIDATES[$((INPUT-1))]}"
+        local choice rc
+        if choice=$(whiptail --title "Browse for your Tribes 2 game folder" \
+                --menu "Now in:  $cur$note\n\n[up/down] highlight a folder, then [Open] to go inside it.\n[Tab] over to [Choose THIS folder] to pick where you are." \
+                22 78 12 "${menu[@]}" \
+                --ok-button "Open" --cancel-button "Choose THIS folder" \
+                3>&1 1>&2 2>&3); then
+            rc=0
         else
-            HOST_GAME_PATH="$INPUT"
+            rc=$?
+        fi
+
+        if [[ $rc -eq 0 ]]; then            # "Open" the highlighted folder
+            case "$choice" in
+                " ")  : ;;
+                "..") cur="$(cd "$cur/.." && pwd)" ;;
+                *)    cur="$(cd "$cur/$choice" 2>/dev/null && pwd)" || true ;;
+            esac
+        elif [[ $rc -eq 1 ]]; then          # "Choose THIS folder"
+            printf '%s\n' "$cur"
+            return 0
+        else                                # Esc -> cancel
+            return 1
+        fi
+    done
+}
+
+# Top-level picker: list detected installs + a "Browse..." option.
+# Prints the chosen path (empty = use the copy baked into the image).
+# Returns non-zero if the user quits.
+select_game_folder() {
+    local cands=() c menu=()
+    while IFS= read -r c; do [[ -n "$c" ]] && cands+=("$c"); done < <(detect_game_candidates)
+    for c in "${cands[@]}"; do menu+=("$c" "use this: $c"); done
+    menu+=("__browse__"  "Browse for a folder...")
+    menu+=("__builtin__" "Use the copy baked into the image")
+
+    local sel
+    sel=$(whiptail --title "Tribes 2 - Select Game Folder" \
+        --menu "Where is your Tribes 2 game folder?\n(the one containing tribes2.dynamic, base/, ...)\n\nUse the arrow keys, then Enter." \
+        20 78 10 "${menu[@]}" \
+        --ok-button "Select" --cancel-button "Quit" \
+        3>&1 1>&2 2>&3) || return 1
+
+    case "$sel" in
+        __browse__)  browse_for_folder "${cands[0]:-$HOME}" ;;
+        __builtin__) printf '' ;;
+        *)           printf '%s\n' "$sel" ;;
+    esac
+}
+
+# If no host game path provided, ask — graphical arrow-key menu when possible.
+if [[ -z "$HOST_GAME_PATH" ]]; then
+    if command -v whiptail >/dev/null 2>&1 && [[ -t 0 && -t 1 ]]; then
+        if ! HOST_GAME_PATH="$(select_game_folder)"; then
+            echo "No folder selected. Aborting."
+            exit 1
         fi
     else
-        echo "(No common locations found automatically.)"
-        read -rp "Enter path (or empty for built-in): " HOST_GAME_PATH
+        # Plain-text fallback (no whiptail, or non-interactive terminal)
+        echo "Enter the path to your Tribes 2 game directory."
+        echo "(folder containing tribes2.dynamic, base/, etc.; empty = built-in copy)"
+        mapfile -t CANDIDATES < <(detect_game_candidates)
+        if [[ ${#CANDIDATES[@]} -gt 0 ]]; then
+            echo "Detected:"
+            for i in "${!CANDIDATES[@]}"; do echo "  $((i+1)). ${CANDIDATES[$i]}"; done
+            read -rp "Enter a path, or a number [1-${#CANDIDATES[@]}] (default: 1): " INPUT
+            INPUT="${INPUT:-1}"
+            if [[ "$INPUT" =~ ^[0-9]+$ ]] && [[ "$INPUT" -ge 1 ]] && [[ "$INPUT" -le ${#CANDIDATES[@]} ]]; then
+                HOST_GAME_PATH="${CANDIDATES[$((INPUT-1))]}"
+            else
+                HOST_GAME_PATH="$INPUT"
+            fi
+        else
+            read -rp "Enter path (or empty for built-in): " HOST_GAME_PATH
+        fi
     fi
 
     # Expand ~

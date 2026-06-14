@@ -55,28 +55,35 @@ If you have additional Loki compatibility shared libraries (e.g. for Civ:CTP), p
    sudo ./asgard-build tribes2
    ```
 
-2. **Run the game (bind-mount your existing game folder — no copy needed):**
-   ```bash
-   ./asgard-run tribes2 /home/cody/t2-linux
-   ```
-   The second argument is the path to your game directory on the host — anywhere
-   you keep it. It gets mounted read-write into the container at runtime (so the
-   engine can write `console.log`, prefs, and screenshots), and the repo's
-   `run_t2.sh` launcher and `base/fonts/` are overlaid on top automatically.
-
-   **Or run it interactively** — with no path argument the script auto-detects
-   common locations (including `~/t2-linux`) and prompts you to pick one or type
-   a path:
-   ```bash
-   ./asgard-run
-   ```
-
-   **Or, if you already copied files into `games/tribes2/`:**
+2. **Run the game — interactive folder menu (recommended):**
    ```bash
    ./asgard-run tribes2
    ```
-   Without a second argument and nothing to prompt for, it uses the game files
-   baked into the image at build time.
+   With no folder argument, an arrow-key menu pops up so you can tell it where
+   your Tribes 2 game folder lives — no need to know or type the path:
+
+   - It first lists any **auto-detected** installs (e.g. `~/t2-linux`,
+     `~/Downloads/t2-linux`). Use **↑/↓** and **Enter** to pick one.
+   - Or choose **"Browse for a folder..."** to open a file browser. Inside it:
+     - **↑/↓** highlight a sub-folder, **Open** (Enter) goes inside it,
+       **".. (go up a level)"** goes back up.
+     - **Tab** over to **"Choose THIS folder"** to select the folder you're
+       currently in. It flags the spot where Tribes 2 is detected.
+   - Or pick **"Use the copy baked into the image"** to run the files bundled at
+     build time.
+
+   The chosen folder is bind-mounted read-write into the container (so the engine
+   can write `console.log`, prefs, and screenshots), and the repo's `run_t2.sh`
+   launcher and `base/fonts/` are layered on top automatically — so your game
+   folder can live anywhere and needs no modification.
+
+   **Skip the menu** by passing the path directly as a second argument:
+   ```bash
+   ./asgard-run tribes2 /home/cody/t2-linux
+   ```
+
+   *(The menu needs `whiptail`, which ships with most distros. Without it, or in a
+   non-interactive shell, the script falls back to a simple text prompt.)*
 
 The wrapper script `run_t2.sh` automatically forces the game to launch in offline mode (`-nologin`) and route output correctly.
 
